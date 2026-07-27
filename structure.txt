@@ -1,0 +1,96 @@
+AiRebar
+|   app_config.json
+|   app_icon.ico
+|   app_state.py
+|   config.py
+|   generate_license.py
+|   main.py
+|   README.md
+|   requirements.txt
+|   structure.txt
+|   User_Guide.html
+|   —«Â‰„«Ì_ò«—»—.html
+|   
++---db
+|       database.py
+|       models.py
+|       __init__.py
+|       
++---logic
+|       bbs_generator.py
+|       calculator.py
+|       inventory.py
+|       optimizer.py
+|       __init__.py
+|       
++---logs
+|       .gitkeep
+|       
++---shapes
+|   |   constants.py
+|   |   definitions.py
+|   |   drawing.py
+|   |   svg_render.py
+|   |   __init__.py
+|   |   
+|   \---standards
+|           aci318.py
+|           as3600.py
+|           bs8666.py
+|           eurocode2.py
+|           gb50010.py
+|           is2502.py
+|           jis.py
+|           mabhas9.py
+|           nbr6118.py
+|           __init__.py
+|           
++---tests
+|       test_calculator.py
+|       test_inventory.py
+|       test_optimizer.py
+|       test_shapes.py
+|       __init__.py
+|       
++---ui
+|   |   bbs_treeview.py
+|   |   commands.py
+|   |   custom_shape_designer.py
+|   |   dialogs.py
+|   |   input_dialog.py
+|   |   input_frame.py
+|   |   license_dialog.py
+|   |   listofer_selector_window.py
+|   |   logo_widget.py
+|   |   main_window.py
+|   |   menu_bar.py
+|   |   preview_frame.py
+|   |   scrap_manager.py
+|   |   settings_window.py
+|   |   splash_screen.py
+|   |   status_bar.py
+|   |   stock_manager.py
+|   |   theme.py
+|   |   welcome_dialog.py
+|   |   __init__.py
+|   |   
+|   \---viz
+|           cutting_diagram.py
+|           shape_viewer.py
+|           __init__.py
+|           
+\---utils
+        bvbs_export.py
+        bvbs_import.py
+        calculations.py
+        cutting_plan_export.py
+        excel_export.py
+        html_report.py
+        license.py
+        logger.py
+        New Text Document.txt
+        password_manager.py
+        pdf_export.py
+        stock_export.py
+        __init__.py
+        

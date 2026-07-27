@@ -1,0 +1,68 @@
+# utils/doctor.py
+from __future__ import annotations
+
+from typing import List
+import traceback
+
+
+def generate_system_report() -> str:
+    lines: List[str] = []
+    lines.append("AI Rebar - System Doctor\n")
+    lines.append("=" * 60)
+
+    try:
+        from shapes.definitions import default_shape_registry, STANDARD_DISPLAY_MAP
+        from shapes import constants
+        from shapes.drawing import DRAW_FUNCTIONS
+
+        lines.append(f"\nTotal shapes loaded: {len(default_shape_registry.flat_shapes)}")
+
+        # standards check
+        lines.append("\n[Standards]")
+        for code in STANDARD_DISPLAY_MAP.keys():
+            keys = default_shape_registry.get_shape_keys_by_standard(code)
+            lines.append(f"  - {code:>4}: {len(keys)} shapes | constants known: {'YES' if code in constants.STANDARDS else 'NO'}")
+
+        # contract check
+        required = ("code", "params", "calc_length", "draw_func", "standard_code")
+        missing_count = 0
+        bad_calc = 0
+        missing_draw = 0
+
+        for k, s in default_shape_registry.flat_shapes.items():
+            if not isinstance(s, dict):
+                missing_count += 1
+                continue
+            for rk in required:
+                if rk not in s:
+                    missing_count += 1
+                    break
+
+            # calc_length sanity (best effort)
+            try:
+                params = default_shape_registry.get_default_params(k)
+                _ = float(s["calc_length"](params, 10.0))
+            except Exception:
+                bad_calc += 1
+
+            df = s.get("draw_func", "draw_generic")
+            # allowed specials
+            if df in ("draw_svg_template", "draw_custom_segmented"):
+                continue
+            if df not in DRAW_FUNCTIONS and df != "draw_generic":
+                # not necessarily fatal because InputDialog can call standard module draw_func,
+                # but we still report it
+                missing_draw += 1
+
+        lines.append("\n[Shape Contract]")
+        lines.append(f"  Missing required keys (approx): {missing_count}")
+        lines.append(f"  calc_length failures (approx):  {bad_calc}")
+        lines.append(f"  draw_func not in DRAW_FUNCTIONS (approx): {missing_draw}")
+
+    except Exception as e:
+        lines.append("\nDoctor crashed:")
+        lines.append(str(e))
+        lines.append(traceback.format_exc())
+
+    lines.append("\n" + "=" * 60)
+    return "\n".join(lines)

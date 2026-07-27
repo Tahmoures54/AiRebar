@@ -1,0 +1,19 @@
+# AI Rebar – required packages
+# Install all: pip install -r requirements.txt
+
+# Data manipulation & export
+pandas>=1.3.0
+openpyxl>=3.0.0
+reportlab>=3.6.0
+numpy>=1.20.0
+python-mip
+
+# Linear programming for cutting optimization
+PuLP>=2.6.0
+
+# Professional SVG rendering (added for shape display)
+svgwrite>=1.4.0
+
+# Note: The following are standard library modules and do not need installation:
+# tkinter, sqlite3, json, math, re, hashlib, os, threading, datetime,
+# webbrowser, shutil, getpass, copy, enum
