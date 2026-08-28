@@ -2,27 +2,26 @@
 __pycache__/
 *.py[cod]
 *.egg-info/
-.pytest_cache/
-.mypy_cache/
-.venv/
-venv/
+.eggs/
 dist/
 build/
 *.spec
 
+# Env / IDE
+venv/
+.venv/
+.env
+.idea/
+.vscode/
+
 # App runtime
-logs/
 *.db
-*.db-shm
 *.db-wal
-rebar_database.db*
+*.db-shm
+logs/
+license.dat
 e2e_exports/
 *.log
-
-# License / secrets (never commit customer keys)
-license.dat
-**/license.dat
-.rebaragent_mid
 
 # OS
 .DS_Store

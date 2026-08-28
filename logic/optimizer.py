@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from logic.optimizer_options import OptimizerOptions
+from logic.optimizer_packing import PULP_AVAILABLE, MIP_AVAILABLE
 from logic.optimizer_core import (
     optimize_cuts,
     optimize_cuts_mip_indexed,
@@ -19,6 +20,8 @@ from logic.optimizer_metrics import (
 )
 
 __all__ = [
+    "PULP_AVAILABLE",
+    "MIP_AVAILABLE",
     "OptimizerOptions",
     "optimize_cuts",
     "optimize_cuts_mip_indexed",
