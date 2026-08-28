@@ -1,6 +1,6 @@
 # main.py
 """
-Main Entry Point – AI Rebar Pro
+Main Entry Point – RebarAgent
 Startup sequence:
 - configure logging
 - init DB (singleton manager)
@@ -14,7 +14,8 @@ import logging
 import tkinter as tk
 from tkinter import messagebox
 
-from config import LOG_FILE, LOG_LEVEL, should_show_welcome
+from config import LOG_FILE, LOG_LEVEL, should_show_welcome, APP_VERSION, APP_NAME
+from utils.i18n import load_language_from_config, apply_to_config_globals, t
 from db.database import DatabaseManager
 from ui.theme import ThemeManager
 from ui.splash_screen import SplashScreen
@@ -23,6 +24,12 @@ from app_state import AppState
 
 
 def _configure_logging():
+    try:
+        load_language_from_config()
+        apply_to_config_globals()
+    except Exception:
+        pass
+
     try:
         log_dir = os.path.dirname(LOG_FILE)
         if log_dir:
@@ -38,20 +45,18 @@ def _configure_logging():
             ]
         )
     except Exception:
-        # اگر logging fail شد، برنامه نباید کرش کند
         logging.basicConfig(level=logging.INFO)
 
 
-logger = logging.getLogger("AI_Rebar.App")
+logger = logging.getLogger("RebarAgent.App")
 
 
-class RebarBBSApp(tk.Tk):
+class RebarAgentApp(tk.Tk):
     def __init__(self):
         super().__init__()
 
         self.state = AppState()
 
-        # Singleton DB manager (thread-safe)
         self.db = DatabaseManager()
         self.db.setup_database()
 
@@ -71,11 +76,9 @@ class RebarBBSApp(tk.Tk):
             self.destroy()
             return
 
-        # Main UI
         self.main_window = MainWindow(self, self)
         self.main_window.pack(fill="both", expand=True)
 
-        # Apply theme (use string key)
         try:
             self.theme_manager.apply_theme("turquoise", save=False)
         except Exception as e:
@@ -85,16 +88,16 @@ class RebarBBSApp(tk.Tk):
         self._show_welcome_if_needed()
 
     def _apply_global_settings(self):
-        self.title("AI Rebar Pro")
+        self.title(t("app_title"))
         self.geometry("1280x800")
+        self.minsize(1024, 700)
         self.report_callback_exception = self._global_error_handler
 
     def _run_security_checks(self) -> bool:
-        # جای لایسنس/پسورد شما
         return True
 
     def _global_error_handler(self, exc_type, exc_value, exc_traceback):
-        logger.critical("Uncaught Exception", exc_info=(exc_type, exc_value, exc_traceback))
+        logger.critical("Uncaught Exception", exc_info=(exc_type, exp_value, exp_traceback))
         messagebox.showerror("System Error", "A critical error occurred. Check logs.")
 
     def _show_welcome_if_needed(self):
@@ -107,11 +110,15 @@ class RebarBBSApp(tk.Tk):
         return getattr(self.main_window, "menu_bar", None)
 
 
-if __name__ == "__main__":
+def main():
     _configure_logging()
     try:
-        app = RebarBBSApp()
+        app = RebarAgentApp()
         app.mainloop()
     except Exception as e:
         logger.error(f"Failed to start app: {e}", exc_info=True)
         raise
+
+
+if __name__ == "__main__":
+    main()
