@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+dist/
+build/
+*.spec
+
+# App runtime
+logs/
+*.db
+*.db-shm
+*.db-wal
+rebar_database.db*
+e2e_exports/
+*.log
+
+# License / secrets (never commit customer keys)
+license.dat
+**/license.dat
+.rebaragent_mid
+
+# OS
+.DS_Store
+Thumbs.db

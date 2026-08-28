@@ -1,0 +1,8 @@
+[project]
+name = "RebarAgent"
+version = "1.6.0"
+description = "Intelligent Bar Bending Schedule and cutting optimization"
+requires-python = ">=3.9"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
