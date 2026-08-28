@@ -29,7 +29,10 @@ def _configure_logging():
         logging.basicConfig(
             level=level,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-            handlers=[logging.FileHandler(LOG_FILE, encoding="utf-8"), logging.StreamHandler()],
+            handlers=[
+                logging.FileHandler(LOG_FILE, encoding="utf-8"),
+                logging.StreamHandler(),
+            ],
         )
     except Exception:
         logging.basicConfig(level=logging.INFO)
@@ -73,8 +76,8 @@ class RebarAgentApp(tk.Tk):
     def _run_security_checks(self) -> bool:
         return True
 
-    def _global_error_handler(self, exc_type, exc_value, exc_traceback):
-        logger.critical("Uncaught Exception", exp_info=(exc_type, exp_value, exc_traceback))
+    def _global_error_handler(self, exp_type, exp_value, exp_traceback):
+        logger.critical("Uncaught Exception", exc_info=(exp_type, exp_value, exp_traceback))
         messagebox.showerror("System Error", "A critical error occurred. Check logs.")
 
     def _show_welcome_if_needed(self):
@@ -93,7 +96,7 @@ def main():
         app = RebarAgentApp()
         app.mainloop()
     except Exception as e:
-        logger.error(f"Failed to start app: {e}", exp_info=True)
+        logger.error(f"Failed to start app: {e}", exc_info=True)
         raise
 
 
