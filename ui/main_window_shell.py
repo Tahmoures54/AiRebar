@@ -104,7 +104,7 @@ class MainWindowShellMixin:
 
         bbs_frame = ttk.LabelFrame(workspace, text="  Bar bending schedule", padding=4)
         bbs_frame.pack(fill="both", expand=True)
-        self.bbs_treeview = BBSTreeview(bbs_frame, self.app)
+        self.bbs_treeview = BBSTreeview(bbs_frame, self.app, theme_key)
         self.bbs_treeview.pack(fill="both", expand=True)
 
         self.status_bar = StatusBar(self, self.app)
