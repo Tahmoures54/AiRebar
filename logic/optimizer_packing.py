@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from typing import List, Optional, Tuple, Dict, Any, Union
 from collections import defaultdict
+import threading
 
 from config import DEFAULT_REBAR_GRADE
 from utils.logger import setup_logger
 from logic.optimizer_metrics import _effective_piece_length
+from logic.optimizer_options import OptimizerOptions
 
 logger = setup_logger("RebarAgent.OptimizerPack")
 
@@ -53,8 +55,7 @@ def _normalize_scrap_infos(
     if not scrap_infos:
         return [], False
     if isinstance(scrap_infos[0], (int, float)):
-        normalized = [(f"scrap_{i}", float(sl)) for i, sl in enumerate(scrap_infos)]
-        return normalized, True
+        return [(f"scrap_{i}", float(sl)) for i, sl in enumerate(scrap_infos)], True
     return [(sid, float(sl)) for sid, sl in scrap_infos], False
 
 
@@ -134,7 +135,7 @@ def _best_fit_decreasing(
         if cut_list:
             scrap_length = next(sl for sid, sl in scrap_infos if sid == scrap_id)
             plan = {"bin": cut_list, "bar_length": scrap_length}
-            if not (temp_ids_used and isinstance(scrap_id, str) and scrap_id.startswith("scrap_")):
+            if not (temp_ids_used and isinstance(scrap_id, str) and str(scrap_id).startswith("scrap_")):
                 plan["scrap_id"] = scrap_id
             plans.append(plan)
     return plans, remaining
@@ -145,11 +146,8 @@ def _pack_one_bar_ffd(
     bar_length: float,
     kerf_m: float = 0.0,
 ) -> Tuple[List[Tuple[float, dict]], List[Tuple[float, dict]], float]:
-    remaining = list(items)
-    packed: List[Tuple[float, dict]] = []
-    used = 0.0
-    still = []
-    for length, label in remaining:
+    packed, still, used = [], [], 0.0
+    for length, label in items:
         need = _effective_piece_length(length, kerf_m)
         if used + need <= bar_length + 1e-9:
             packed.append((length, label))
@@ -159,3 +157,44 @@ def _pack_one_bar_ffd(
     cut = sum(l for l, _ in packed)
     waste = max(0.0, bar_length - cut)
     return packed, still, waste
+
+
+def _pack_all_single_stock(
+    items: List[Tuple[float, dict]],
+    stock_length: float,
+    opts: OptimizerOptions,
+    cancel_event: Optional[threading.Event],
+    stock_limit: Optional[int],
+) -> Tuple[List[Dict], List[float]]:
+    from logic.optimizer_algorithms import optimize_cuts_mip_indexed
+    if not items:
+        return [], []
+    kerf = opts.kerf_m or 0.0
+    if kerf > 1e-12:
+        adj_items = [(_effective_piece_length(l, kerf), lbl) for l, lbl in items]
+        err = _validate_lengths([l for l, _ in adj_items], stock_length)
+        if err:
+            adj_items = items
+    else:
+        adj_items = items
+    remaining_lengths = [l for l, _ in adj_items]
+    bins_idx = optimize_cuts_mip_indexed(
+        remaining_lengths, stock_length, opts=opts,
+        stock_count_limit=stock_limit, cancel_event=cancel_event,
+    )
+    plans: List[Dict] = []
+    new_scraps: List[float] = []
+    seq = 1
+    min_scrap = opts.min_usable_scrap_m or 0.0
+    for b in bins_idx:
+        bin_items = [(items[i][0], items[i][1]) for i in b]
+        cut = sum(l for l, _ in bin_items)
+        waste = max(0.0, stock_length - cut)
+        if waste >= min_scrap - 1e-9 and waste > 1e-6:
+            new_scraps.append(round(waste, 6))
+        plans.append({
+            "bin": bin_items, "bar_length": stock_length,
+            "scrap_id": None, "stock_seq": seq,
+        })
+        seq += 1
+    return plans, new_scraps
