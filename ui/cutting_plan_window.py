@@ -198,6 +198,12 @@ class CuttingPlanWindow(tk.Toplevel):
             data_hash = _compute_data_hash(self.project_id, self.listofer_filter, self.stock_len)
             _save_plan(self.project_id, self.listofer_filter, self.stock_len, data_hash, self.plans_per_group, status="confirmed")
             _confirm_plan(self.project_id, self.listofer_filter, self.stock_len, data_hash)
+            try:
+                from utils.events import bus
+                bus.emit("cut.confirmed", {"project_id": self.project_id})
+                bus.emit("ui.refresh_request", {"reason": "cut_confirmed", "project_id": self.project_id})
+            except Exception:
+                pass
             self._enable_buttons()
             self.summary_var.set(f"Confirmed. Stock bars used: {ledger.get('stock_bars_consumed', 0)}")
             messagebox.showinfo("Confirmed", "Inventory updated.", parent=self)
@@ -211,6 +217,12 @@ class CuttingPlanWindow(tk.Toplevel):
                 return
             try:
                 revert_cutting_plan_inventory(self.project_id, self._inventory_ledger)
+                try:
+                    from utils.events import bus
+                    bus.emit("cut.rolled_back", {"project_id": self.project_id})
+                    bus.emit("ui.refresh_request", {"reason": "cut_rolled_back", "project_id": self.project_id})
+                except Exception:
+                    pass
             except Exception as e:
                 messagebox.showerror("Revert", str(e), parent=self)
                 return
