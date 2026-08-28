@@ -1,9 +1,5 @@
 # db/database.py
-"""
-Database Manager – AI Rebar
-Handles SQLite connection, table creation, and provides
-a central execute/fetch interface.
-"""
+"""Database Manager – RebarAgent. SQLite connection, tables, migrations."""
 
 import sqlite3
 import threading
@@ -12,7 +8,7 @@ from config import DB_PATH
 
 
 class DatabaseManager:
-    """Thread‑safe singleton‑like manager for SQLite access."""
+    """Thread-safe singleton-like manager for SQLite access."""
 
     _instance = None
     _lock = threading.Lock()
@@ -27,20 +23,18 @@ class DatabaseManager:
     def __init__(self, db_path=None):
         if getattr(self, "_initialised", False):
             return
-
         self.db_path = db_path or DB_PATH
-
         db_dir = os.path.dirname(self.db_path)
         if db_dir:
             os.makedirs(db_dir, exist_ok=True)
-
         self._local = threading.local()
         self._initialised = True
+        self.schema_version = 0
         self._create_tables()
+        self._run_migrations()
 
     @property
     def connection(self):
-        # thread-local connection
         if not hasattr(self._local, "connection") or self._local.connection is None:
             self._local.connection = sqlite3.connect(self.db_path, timeout=30)
             self._local.connection.execute("PRAGMA journal_mode=WAL")
@@ -50,7 +44,6 @@ class DatabaseManager:
     def _create_tables(self):
         conn = self.connection
         cursor = conn.cursor()
-
         cursor.executescript(
             """
             CREATE TABLE IF NOT EXISTS projects (
@@ -59,7 +52,6 @@ class DatabaseManager:
                 client TEXT,
                 last_accessed TEXT
             );
-
             CREATE TABLE IF NOT EXISTS listofers (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 project_id INTEGER NOT NULL,
@@ -67,7 +59,6 @@ class DatabaseManager:
                 description TEXT,
                 FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
             );
-
             CREATE TABLE IF NOT EXISTS rebars (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 listofer_id INTEGER NOT NULL,
@@ -84,7 +75,6 @@ class DatabaseManager:
                 standard TEXT DEFAULT 'bs',
                 FOREIGN KEY (listofer_id) REFERENCES listofers(id) ON DELETE CASCADE
             );
-
             CREATE TABLE IF NOT EXISTS scraps (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 project_id INTEGER NOT NULL,
@@ -96,24 +86,21 @@ class DatabaseManager:
                 listofer_number TEXT,
                 FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
             );
-
             CREATE TABLE IF NOT EXISTS stock (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 project_id INTEGER,
                 diameter REAL NOT NULL,
-                length REAL NOT NULL,     -- mm
+                length REAL NOT NULL,
                 quantity INTEGER DEFAULT 0,
                 grade TEXT DEFAULT 'A3',
                 FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
             );
-
             CREATE TABLE IF NOT EXISTS custom_shapes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 code TEXT NOT NULL UNIQUE,
                 name TEXT NOT NULL,
                 definition TEXT NOT NULL
             );
-
             CREATE TABLE IF NOT EXISTS cutting_plans (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 project_id INTEGER NOT NULL,
@@ -124,7 +111,6 @@ class DatabaseManager:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
             );
-
             CREATE TABLE IF NOT EXISTS cutting_plan_bars (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 plan_id INTEGER NOT NULL,
@@ -133,7 +119,6 @@ class DatabaseManager:
                 is_scrap INTEGER DEFAULT 0,
                 FOREIGN KEY (plan_id) REFERENCES cutting_plans(id) ON DELETE CASCADE
             );
-
             CREATE TABLE IF NOT EXISTS cutting_plan_pieces (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 bar_id INTEGER NOT NULL,
@@ -145,7 +130,6 @@ class DatabaseManager:
                 grade TEXT,
                 FOREIGN KEY (bar_id) REFERENCES cutting_plan_bars(id) ON DELETE CASCADE
             );
-
             CREATE TABLE IF NOT EXISTS cutting_assignments (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 project_id INTEGER NOT NULL,
@@ -157,18 +141,27 @@ class DatabaseManager:
                 FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
                 FOREIGN KEY (rebar_id) REFERENCES rebars(id) ON DELETE CASCADE
             );
-
-            -- Helpful indexes (speed)
             CREATE INDEX IF NOT EXISTS idx_listofers_project ON listofers(project_id);
-            CREATE INDEX IF NOT EXISTS idx_rebars_listofer   ON rebars(listofer_id);
+            CREATE INDEX IF NOT EXISTS idx_rebars_listofer ON rebars(listofer_id);
             CREATE INDEX IF NOT EXISTS idx_scraps_proj_dia_used ON scraps(project_id, diameter, used);
             CREATE INDEX IF NOT EXISTS idx_stock_proj_dia ON stock(project_id, diameter);
             """
         )
         conn.commit()
 
+    def _run_migrations(self):
+        try:
+            from db.migrations import run_migrations
+            ver = run_migrations(self.connection)
+            self.schema_version = ver
+        except Exception as e:
+            import logging
+            logging.getLogger("RebarAgent.DB").error("Migration failed: %s", e, exc_info=True)
+            self.schema_version = 0
+
     def setup_database(self):
         self._create_tables()
+        self._run_migrations()
 
     def execute(self, query, params=(), commit=False):
         conn = self.connection
@@ -179,16 +172,18 @@ class DatabaseManager:
         return cursor.lastrowid
 
     def fetchone(self, query, params=()):
-        conn = self.connection
-        cursor = conn.cursor()
+        cursor = self.connection.cursor()
         cursor.execute(query, params)
         return cursor.fetchone()
 
     def fetchall(self, query, params=()):
-        conn = self.connection
-        cursor = conn.cursor()
+        cursor = self.connection.cursor()
         cursor.execute(query, params)
         return cursor.fetchall()
+
+    def backup_database_file(self, dest_path: str = None) -> str:
+        from utils.backup_db import backup_full_database
+        return backup_full_database(dest_path, note="database_manager")
 
     def close(self):
         if hasattr(self._local, "connection") and self._local.connection:
@@ -196,5 +191,4 @@ class DatabaseManager:
             self._local.connection = None
 
 
-# Singleton instance
 db = DatabaseManager()
